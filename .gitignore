@@ -2,8 +2,12 @@
 frames/
 *.png
 
-# Output (large; regenerate with the scripts)
+# Generated output (large; regenerate with the scripts)
 *.webp
+
+# ...but the README assets are tracked deliberately
+!docs/*.png
+!docs/*.webp
 
 __pycache__/
 *.pyc

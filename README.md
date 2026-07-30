@@ -6,6 +6,11 @@ for OLED displays.
 The output is an animated WebP: a pure-black field of stars that slowly drift and
 twinkle, looping perfectly with no visible seam.
 
+![preview](docs/preview.webp)
+
+*Preview: 640×360, 10 s loop. The real thing defaults to 2560×1440 with a 33 s
+loop and a denser field.*
+
 ---
 
 ## Stuck? Point an AI agent at it and go to town
@@ -198,6 +203,77 @@ That restarts only the shell, not the compositor, so your windows are unaffected
 GNOME doesn't support animated wallpapers natively. Sway/Hyprland can use
 `mpvpaper` or `swww`. Note that layer-shell tools like those conflict with KDE's
 plasmashell over desktop ownership — on Plasma, use the Image plugin above.
+
+---
+
+## Troubleshooting
+
+Every problem below was hit for real while building this.
+
+### Blocky halos or cross-shaped smudges around the bright stars
+
+![lossy versus lossless](docs/lossy-vs-lossless.png)
+
+You encoded lossy. A 1–3px bright star on pure black is the worst case for a
+lossy block transform — it can't represent that much local contrast, so the error
+smears across the block.
+
+The left panel above is `quality=72`, the right is the lossless default, same
+source frame and same crop at 3× zoom. **4.35% of should-be-black pixels came back
+lit**, some as bright as 32/255.
+
+Fix: drop `--lossy`. It's off by default, so this only happens if you asked for it.
+
+### It renders, but my desktop shows a still frame
+
+On KDE Plasma the Image wallpaper plugin has a `ForceImageAnimation` setting that
+defaults to **false** and isn't exposed anywhere in the GUI. See
+[Setting it as your wallpaper](#setting-it-as-your-wallpaper) for the one-liner
+that enables it.
+
+### I replaced the file but the wallpaper didn't change
+
+Plasma caches the wallpaper by path. Restart the shell:
+
+```bash
+systemctl --user restart plasma-plasmashell.service
+```
+
+That restarts only the shell — the compositor and your windows are unaffected.
+
+### I changed `--frames` and now the motion is a different speed
+
+Expected. Apparent speed is proportional to **harmonic ÷ loop length**, so a longer
+loop is a slower loop with everything else held constant. Going from 180 to 500
+frames (2.78× longer) slows motion to 0.36× on its own.
+
+To lengthen the loop while controlling speed, scale the harmonic ranges to
+compensate. For 2.78× longer but only 40% slower, multiply them by about 1.5:
+
+```bash
+python3 make_starfield.py /tmp/f --frames 500 \
+  --twinkle-lo 2 --twinkle-hi 7 --wobble-lo 2 --wobble-hi 4
+```
+
+### `ffprobe` says the file has 0 frames, or Pillow reports no durations
+
+Both tools are wrong about animated WebP, in different ways. ffmpeg's native
+decoder returns zero frames for animated WebP, and Pillow reports per-frame
+durations as `None` when reading even when they're correctly present.
+
+Use `verify_webp.py`, which walks the RIFF chunks directly:
+
+```bash
+python3 verify_webp.py starfield-oled.webp --frames /tmp/starframes
+```
+
+### The whole desktop looks dimmer with this wallpaper than without
+
+Unlikely — this one is *very* dark by design — but if you modified it to be
+brighter, that's OLED automatic brightness limiting. Panels cap sustained
+full-screen output well below their peak (a typical spec is ~600 nits peak against
+a ~150 nit frame-average cap), so raising the wallpaper's average picture level
+makes the panel clamp everything dimmer. Keep the background black.
 
 ---
 
