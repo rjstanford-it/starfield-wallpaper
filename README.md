@@ -8,6 +8,36 @@ twinkle, looping perfectly with no visible seam.
 
 ---
 
+## Stuck? Point an AI agent at it and go to town
+
+If any of this doesn't work on your machine, don't fight it — hand the whole
+repository to your favourite coding agent and tell it what you want.
+
+This project is deliberately shaped for that. It's three short Python files with
+no framework, no build step, and comments that explain *why* rather than just
+what. Clone it, open the directory in Claude Code, Codex, Cursor, Aider or
+whatever you use, and describe the outcome in plain language:
+
+> "Render this at 3440×1440 for my ultrawide, make the stars about half as dense
+> and the motion noticeably slower, then set it as my wallpaper."
+
+> "It renders but my desktop shows a still frame instead of animating — work out
+> why and fix it."
+
+Everything an agent needs is here. Every knob is a documented CLI argument. The
+one genuinely counter-intuitive constraint — motion speed scales with
+*harmonic ÷ loop length*, so changing the frame count silently changes the speed —
+is called out in `--help` and below. Both encoding traps are written up with the
+measurements behind them, so an agent won't burn your evening rediscovering that
+lossy WebP rings around stars or that ffmpeg writes no frame durations.
+
+The genuinely fiddly part is wiring the result into your particular desktop, and
+that's precisely what an agent is good at: it can inspect your actual system,
+find the right config keys, and verify the result rather than guessing from a
+guide written for someone else's setup.
+
+---
+
 ## Why this exists rather than just downloading a video loop
 
 Most animated wallpapers are actively bad for an OLED panel. This one is built
