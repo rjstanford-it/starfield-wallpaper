@@ -1,0 +1,10 @@
+# Rendered intermediates
+frames/
+*.png
+
+# Output (large; regenerate with the scripts)
+*.webp
+
+__pycache__/
+*.pyc
+.venv/
