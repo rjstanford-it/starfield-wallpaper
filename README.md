@@ -198,11 +198,74 @@ If you replace the file later at the same path, Plasma caches it — restart the
 with `systemctl --user restart plasma-plasmashell.service` to pick up the change.
 That restarts only the shell, not the compositor, so your windows are unaffected.
 
-### Other desktops
+### Other Linux desktops
 
 GNOME doesn't support animated wallpapers natively. Sway/Hyprland can use
 `mpvpaper` or `swww`. Note that layer-shell tools like those conflict with KDE's
 plasmashell over desktop ownership — on Plasma, use the Image plugin above.
+
+### Windows 10 / 11
+
+Windows has no native animated wallpaper support at all. Setting the WebP through
+Settings → Personalization → Background gives you a still frame, and there is no
+hidden switch equivalent to Plasma's `ForceImageAnimation`. You need a helper app
+that draws behind the desktop icons.
+
+[Lively Wallpaper](https://github.com/rocksdanister/lively) is free and open
+source, and is the path this section assumes:
+
+```powershell
+winget install rocksdanister.LivelyWallpaper
+```
+
+Generate the WebP first. On Windows the interpreter is `python`, not `python3`:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install numpy pillow
+.venv\Scripts\python.exe make_starfield.py $env:TEMP\starframes
+.venv\Scripts\python.exe encode_webp.py $env:TEMP\starframes starfield-oled.webp
+```
+
+Then add it as a **web** wallpaper rather than a picture — the web path is the one
+that reliably animates WebP, because it runs the file through WebView2 (Chromium),
+which has decoded animated WebP for years. Put a one-file wrapper next to the
+`.webp`:
+
+```html
+<meta charset="utf-8">
+<title>Starfield (OLED)</title>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  img { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover;
+        image-rendering: pixelated; user-select: none; -webkit-user-drag: none; }
+</style>
+<img src="starfield-oled.webp" alt="">
+```
+
+`image-rendering: pixelated` matters: it keeps stars crisp when the render
+resolution matches the display exactly, which is the intended case. If you render
+at a different size than your panel, drop that line and let the browser filter.
+
+In Lively: **+** (Add Wallpaper) → **Browse** → select `index.html` → click the
+entry in the library to apply. Two notes on living with it:
+
+* Lively has to stay running. It sits in the tray and starts with Windows by
+  default; fully quitting it reverts the desktop to a static background.
+* Under **Settings → Performance**, set wallpapers to pause when a fullscreen or
+  maximised app is running. The cost of compositing this is small, but there's no
+  reason to pay it while gaming.
+
+[Wallpaper Engine](https://store.steampowered.com/app/431960/) (paid, via Steam)
+works with the identical wrapper: Create Wallpaper → **Web** → point it at the
+`index.html`.
+
+**Don't transcode to MP4 or WebM for this.** It's the obvious move, since video is
+what wallpaper apps natively want, and it fails for exactly the reason lossy WebP
+fails — see [Two encoding traps](#two-encoding-traps). Isolated bright points on
+pure black are the worst case for a block transform, and H.264/VP9 at any sane
+bitrate ring around every star and lift the black floor off zero. The whole point
+of the format choice is that the black pixels decode to exactly `0,0,0`.
 
 ---
 
@@ -230,6 +293,25 @@ On KDE Plasma the Image wallpaper plugin has a `ForceImageAnimation` setting tha
 defaults to **false** and isn't exposed anywhere in the GUI. See
 [Setting it as your wallpaper](#setting-it-as-your-wallpaper) for the one-liner
 that enables it.
+
+On Windows, Settings → Personalization → Background will *always* show a still
+frame — the OS has no animated wallpaper support to enable. You need Lively or
+Wallpaper Engine, and the file has to be added as a **web** wallpaper pointing at
+the HTML wrapper, not as a picture pointing at the `.webp`.
+
+### The HTML wrapper looks frozen when I preview it in a browser
+
+Expected, and not a fault in the file. Chromium suspends animated-image playback
+whenever the page isn't actually being composited — a background tab, a minimised
+window, or an offscreen preview surface all report `document.hidden === true` and
+freeze the WebP on whatever frame it reached. Bring the tab to the foreground and
+it resumes.
+
+This doesn't affect the wallpaper itself: Lively and Wallpaper Engine render into
+a visible desktop surface, so the page stays unhidden and the animation runs. If
+you want to confirm the file is genuinely animating rather than trusting the eye,
+`verify_webp.py` reads the frame count and per-frame durations straight out of the
+RIFF chunks.
 
 ### I replaced the file but the wallpaper didn't change
 
